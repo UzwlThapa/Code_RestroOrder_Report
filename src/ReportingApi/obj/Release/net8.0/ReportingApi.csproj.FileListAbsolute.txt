@@ -1,0 +1,7 @@
+D:\Projects\RestroOrder_Report\tally-reports\src\ReportingApi\obj\Release\net8.0\ReportingApi.csproj.AssemblyReference.cache
+D:\Projects\RestroOrder_Report\tally-reports\src\ReportingApi\obj\Release\net8.0\rpswa.dswa.cache.json
+D:\Projects\RestroOrder_Report\tally-reports\src\ReportingApi\obj\Release\net8.0\ReportingApi.GeneratedMSBuildEditorConfig.editorconfig
+D:\Projects\RestroOrder_Report\tally-reports\src\ReportingApi\obj\Release\net8.0\ReportingApi.AssemblyInfoInputs.cache
+D:\Projects\RestroOrder_Report\tally-reports\src\ReportingApi\obj\Release\net8.0\ReportingApi.AssemblyInfo.cs
+D:\Projects\RestroOrder_Report\tally-reports\src\ReportingApi\obj\Release\net8.0\ReportingApi.csproj.CoreCompileInputs.cache
+D:\Projects\RestroOrder_Report\tally-reports\src\ReportingApi\obj\Release\net8.0\ReportingApi.MvcApplicationPartsAssemblyInfo.cache
