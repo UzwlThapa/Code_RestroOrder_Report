@@ -1,113 +1,927 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>RestroOrder Reports</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>body{padding:24px;background:#f7f7f9} .card{margin-bottom:20px}</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RestroOrder Reports - Premium Dashboard</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- XLSX for Excel Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    
+    <!-- jsPDF for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.7.1/jspdf.plugin.autotable.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#fbbf24',
+                        secondary: '#1e293b',
+                        background: '#f8fafc',
+                        card: '#ffffff',
+                        border: '#e2e8f0',
+                        muted: '#64748b',
+                        foreground: '#0f172a'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .sidebar-item { transition: all 0.2s ease; }
+        .sidebar-item:hover { background: #f1f5f9; }
+        .sidebar-item.active { background: #fef3c7; border-right: 3px solid #fbbf24; }
+        .loading-spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .toast { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    </style>
 </head>
-<body>
-<div class="container">
-  <h2 class="mb-4">RestroOrder Reports</h2>
-
-  <div class="card p-3">
-    <h5>IRD Nepal Sales Book / Sales Return Book</h5>
-    <p class="text-muted small">Dates are BS (Bikram Sambat), dot-separated — e.g. 2082.04.01 — same format the existing sync service uses.</p>
-    <div class="row g-2">
-      <div class="col-auto"><label class="form-label">From (BS)</label><input id="irdFrom" class="form-control" placeholder="2082.04.01"></div>
-      <div class="col-auto"><label class="form-label">To (BS)</label><input id="irdTo" class="form-control" placeholder="2082.04.30"></div>
+<body class="bg-background text-foreground min-h-screen">
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- Sidebar -->
+        <aside id="sidebar" class="w-64 bg-card border-r border-border flex-shrink-0 transition-all duration-300">
+            <div class="h-full flex flex-col">
+                <!-- Brand -->
+                <div class="p-4 border-b border-border flex items-center gap-3">
+                    <div class="w-8 h-8 rounded bg-primary flex items-center justify-center">
+                        <i data-lucide="utensils" class="w-5 h-5 text-secondary"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-sm font-semibold">RestroReports</h1>
+                        <p class="text-xs text-muted">FY 2083</p>
+                    </div>
+                </div>
+                
+                <!-- Search -->
+                <div class="p-3 border-b border-border">
+                    <div class="relative">
+                        <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted"></i>
+                        <input type="text" id="reportSearch" placeholder="Search reports..." 
+                            class="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+                    </div>
+                </div>
+                
+                <!-- Navigation -->
+                <nav class="flex-1 overflow-y-auto p-3 space-y-1">
+                    <div class="mb-4">
+                        <h3 class="text-xs font-semibold text-muted uppercase tracking-wider mb-2 px-3">Sales Reports</h3>
+                        <a href="#" data-report="ird-sales" class="sidebar-item active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm cursor-pointer">
+                            <i data-lucide="book-open" class="w-4 h-4"></i>
+                            <span>IRD Sales Book</span>
+                        </a>
+                        <a href="#" data-report="ird-returns" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm cursor-pointer">
+                            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                            <span>Sales Return Book</span>
+                        </a>
+                        <a href="#" data-report="materialized" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm cursor-pointer">
+                            <i data-lucide="database" class="w-4 h-4"></i>
+                            <span>Materialized View</span>
+                        </a>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="text-xs font-semibold text-muted uppercase tracking-wider mb-2 px-3">Menu Analysis</h3>
+                        <a href="#" data-report="item-sales" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm cursor-pointer">
+                            <i data-lucide="trending-up" class="w-4 h-4"></i>
+                            <span>Item Sales Report</span>
+                            <span class="ml-auto text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">New</span>
+                        </a>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-xs font-semibold text-muted uppercase tracking-wider mb-2 px-3">Purchasing</h3>
+                        <a href="#" data-report="cost-centre" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm cursor-pointer">
+                            <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+                            <span>Cost Centre Purchase</span>
+                            <span class="ml-auto text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">New</span>
+                        </a>
+                    </div>
+                </nav>
+                
+                <!-- Footer -->
+                <div class="p-4 border-t border-border">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-white text-sm font-medium">A</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium truncate">Admin User</p>
+                            <p class="text-xs text-muted truncate">admin@restro.com</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col overflow-hidden">
+            
+            <!-- Top Bar -->
+            <header class="h-16 bg-card border-b border-border flex items-center justify-between px-6 flex-shrink-0">
+                <div class="flex items-center gap-4">
+                    <button id="toggleSidebar" class="p-2 hover:bg-background rounded-lg">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                    <h2 id="pageTitle" class="text-lg font-semibold">IRD Sales Book</h2>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <button onclick="exportExcel()" class="flex items-center gap-2 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                        <span>Excel</span>
+                    </button>
+                    <button onclick="exportPDF()" class="flex items-center gap-2 px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                        <span>PDF</span>
+                    </button>
+                    <button onclick="refreshData()" class="p-2 hover:bg-background rounded-lg">
+                        <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </header>
+            
+            <!-- Content Area -->
+            <div class="flex-1 overflow-y-auto p-6">
+                
+                <!-- Filters Bar -->
+                <div id="filtersBar" class="bg-card border border-border rounded-xl p-4 mb-6">
+                    <div class="flex flex-wrap items-end gap-4" id="filterContainer">
+                        <!-- Dynamic filters will be inserted here -->
+                    </div>
+                    <div class="mt-4 flex gap-3">
+                        <button onclick="loadReport()" class="px-6 py-2 bg-primary text-secondary font-medium rounded-lg hover:bg-yellow-400">
+                            Apply Filters
+                        </button>
+                        <button onclick="resetFilters()" class="px-6 py-2 border border-border rounded-lg hover:bg-background">
+                            Reset
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Metrics Cards -->
+                <div id="metricsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <!-- Dynamic metrics will be inserted here -->
+                </div>
+                
+                <!-- Chart -->
+                <div class="bg-card border border-border rounded-xl p-4 mb-6">
+                    <h3 class="text-sm font-semibold mb-4">Sales Trend</h3>
+                    <canvas id="trendChart" height="80"></canvas>
+                </div>
+                
+                <!-- Data Table -->
+                <div class="bg-card border border-border rounded-xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full" id="dataTable">
+                            <thead class="bg-background border-b border-border">
+                                <tr id="tableHeader"></tr>
+                            </thead>
+                            <tbody id="tableBody" class="divide-y divide-border"></tbody>
+                            <tfoot class="bg-background border-t border-border" id="tableFooter"></tfoot>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div class="flex items-center justify-between px-4 py-3 border-t border-border" id="pagination">
+                        <p class="text-sm text-muted" id="pageInfo">Showing 0-0 of 0</p>
+                        <div class="flex gap-2">
+                            <button onclick="prevPage()" class="px-3 py-1.5 text-sm border border-border rounded hover:bg-background">Previous</button>
+                            <button onclick="nextPage()" class="px-3 py-1.5 text-sm border border-border rounded hover:bg-background">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
-    <div class="mt-2 d-flex gap-2">
-      <button class="btn btn-outline-secondary" onclick="downloadIrd('ird-sales-book')">Sales Book (.xlsx)</button>
-      <button class="btn btn-outline-secondary" onclick="downloadIrd('ird-sales-return-book')">Sales Return Book (.xlsx)</button>
+    
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+    
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black/50 z-40 hidden items-center justify-center">
+        <div class="bg-card rounded-xl p-6 flex items-center gap-4">
+            <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full loading-spinner"></div>
+            <span class="font-medium">Loading data...</span>
+        </div>
     </div>
-  </div>
-
-  <div class="card p-3">
-    <h5>Sales Report</h5>
-    <div class="row g-2">
-      <div class="col-auto"><label class="form-label">From</label><input type="date" id="from" class="form-control"></div>
-      <div class="col-auto"><label class="form-label">To</label><input type="date" id="to" class="form-control"></div>
-      <div class="col-auto"><label class="form-label">Item</label><input id="item" class="form-control" placeholder="Momo"></div>
-      <div class="col-auto"><label class="form-label">Cost Center</label><input id="costCenter" class="form-control" placeholder="Bar"></div>
-      <div class="col-auto"><label class="form-label">Unit</label><input id="unit" class="form-control" placeholder="Plate"></div>
-      <div class="col-auto"><label class="form-label">Rate min</label><input id="rateMin" class="form-control" type="number"></div>
-      <div class="col-auto"><label class="form-label">Rate max</label><input id="rateMax" class="form-control" type="number"></div>
-      <div class="col-auto"><label class="form-label">Table</label><input id="table" class="form-control" placeholder="T4"></div>
-      <div class="col-auto"><label class="form-label">Payment Mode</label><input id="paymentMode" class="form-control" placeholder="Cash"></div>
-    </div>
-    <div class="mt-3 d-flex gap-2 flex-wrap">
-      <button class="btn btn-primary" onclick="preview()">Preview</button>
-      <button class="btn btn-success" onclick="download('sales/export')">Export Filtered Sales Report (.xlsx)</button>
-      <button class="btn btn-success" onclick="download('materialized/export')">Export Materialized Report (.xlsx)</button>
-    </div>
-    <div class="mt-3 input-group" style="max-width:460px">
-      <input id="ownerEmail" class="form-control" placeholder="owner@email.com">
-      <select id="emailReportType" class="form-select">
-        <option value="sales">Sales Report (filtered)</option>
-        <option value="materialized">Materialized Report</option>
-      </select>
-      <button class="btn btn-dark" onclick="emailReport()">Email to Owner</button>
-    </div>
-  </div>
-
-  <div class="table-responsive">
-    <table class="table table-sm table-striped bg-white" id="resultTable"></table>
-  </div>
-</div>
-
-<script>
-function filterParams() {
-  const p = new URLSearchParams();
-  p.set('from', document.getElementById('from').value);
-  p.set('to', document.getElementById('to').value);
-  ['item','costCenter','unit','rateMin','rateMax','table','paymentMode'].forEach(id => {
-    const v = document.getElementById(id).value;
-    if (v) p.set(id, v);
-  });
-  return p;
-}
-
-async function preview() {
-  const res = await fetch('/api/reports/sales?' + filterParams());
-  renderTable(await res.json());
-}
-
-function renderTable(rows) {
-  const table = document.getElementById('resultTable');
-  if (!rows.length) { table.innerHTML = '<tr><td>No rows for this filter.</td></tr>'; return; }
-  const cols = Object.keys(rows[0]);
-  table.innerHTML = '<thead><tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr></thead>' +
-    '<tbody>' + rows.map(r => '<tr>' + cols.map(c => `<td>${r[c] ?? ''}</td>`).join('') + '</tr>').join('') + '</tbody>';
-}
-
-function download(path) { window.location = '/api/reports/' + path + '?' + filterParams(); }
-
-function downloadIrd(path) {
-  const p = new URLSearchParams();
-  p.set('from', document.getElementById('irdFrom').value);
-  p.set('to', document.getElementById('irdTo').value);
-  window.location = '/api/reports/' + path + '?' + p;
-}
-
-async function emailReport() {
-  const reportType = document.getElementById('emailReportType').value;
-  const toEmail = document.getElementById('ownerEmail').value;
-  const body = {
-    reportType, toEmail,
-    from: document.getElementById('from').value,
-    to: document.getElementById('to').value,
-    item: document.getElementById('item').value || null,
-    costCenter: document.getElementById('costCenter').value || null,
-    unit: document.getElementById('unit').value || null,
-    table: document.getElementById('table').value || null,
-    paymentMode: document.getElementById('paymentMode').value || null
-  };
-  const res = await fetch('/api/reports/email', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-  });
-  alert(res.ok ? 'Sent to ' + toEmail : 'Failed to send — check SMTP settings.');
-}
-</script>
+    
+    <script>
+        // ==================== STATE ====================
+        let currentReport = 'ird-sales';
+        let tableData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        const rowsPerPage = 10;
+        let trendChartInstance = null;
+        
+        // Report configurations
+        const reportConfigs = {
+            'ird-sales': {
+                title: 'IRD Sales Book',
+                endpoint: '/api/reports/ird-sales-book',
+                dateType: 'bs',
+                filters: ['from', 'to'],
+                columns: [
+                    { key: 'billNo', label: 'Bill No.', type: 'text' },
+                    { key: 'invoiceDate', label: 'Date', type: 'date' },
+                    { key: 'buyerName', label: 'Buyer Name', type: 'text' },
+                    { key: 'buyerPAN', label: 'Buyer PAN', type: 'text' },
+                    { key: 'totalSaleValue', label: 'Gross Amount', type: 'currency' },
+                    { key: 'discountAmount', label: 'Discount', type: 'currency' },
+                    { key: 'taxableAmount', label: 'Taxable', type: 'currency' },
+                    { key: 'vataMount', label: 'VAT 13%', type: 'currency' },
+                    { key: 'totalWithVAT', label: 'Net Amount', type: 'currency' },
+                    { key: 'paymentMode', label: 'Payment', type: 'badge' }
+                ],
+                metrics: ['totalSales', 'totalVAT', 'totalDiscount', 'transactionCount']
+            },
+            'ird-returns': {
+                title: 'Sales Return Book',
+                endpoint: '/api/reports/ird-sales-return-book',
+                dateType: 'bs',
+                filters: ['from', 'to'],
+                columns: [
+                    { key: 'creditNoteNo', label: 'Credit Note No', type: 'text' },
+                    { key: 'creditNoteDate', label: 'Date', type: 'date' },
+                    { key: 'originalInvoiceNo', label: 'Original Invoice', type: 'text' },
+                    { key: 'buyerName', label: 'Buyer Name', type: 'text' },
+                    { key: 'buyerPAN', label: 'Buyer PAN', type: 'text' },
+                    { key: 'returnTaxableAmount', label: 'Return Taxable', type: 'currency' },
+                    { key: 'returnVATAmount', label: 'Return VAT', type: 'currency' },
+                    { key: 'totalReturnAmount', label: 'Total Return', type: 'currency' },
+                    { key: 'returnReason', label: 'Reason', type: 'text' }
+                ],
+                metrics: ['totalReturns', 'returnVAT', 'returnCount']
+            },
+            'materialized': {
+                title: 'Materialized View Report',
+                endpoint: '/api/reports/materialized',
+                dateType: 'ad',
+                filters: ['from', 'to', 'paymentMode', 'valid'],
+                columns: [
+                    { key: 'billNo', label: 'Bill No.', type: 'text' },
+                    { key: 'billDate', label: 'Date', type: 'date' },
+                    { key: 'customerName', label: 'Customer', type: 'text' },
+                    { key: 'customerPAN', label: 'PAN', type: 'text' },
+                    { key: 'taxableAmount', label: 'Taxable', type: 'currency' },
+                    { key: 'discountAmount', label: 'Discount', type: 'currency' },
+                    { key: 'serviceCharge', label: 'Service Charge', type: 'currency' },
+                    { key: 'vataMount', label: 'VAT', type: 'currency' },
+                    { key: 'netAmount', label: 'Net', type: 'currency' },
+                    { key: 'paymentMode', label: 'Payment', type: 'badge' },
+                    { key: 'isPrinted', label: 'Printed', type: 'badge' }
+                ],
+                metrics: ['totalRevenue', 'totalVAT', 'avgBill', 'transactionCount']
+            },
+            'item-sales': {
+                title: 'Item Sales Report (Menu Engineering)',
+                endpoint: '/api/reports/item-sales',
+                dateType: 'ad',
+                filters: ['from', 'to', 'category', 'branch'],
+                columns: [
+                    { key: 'itemName', label: 'Item Name', type: 'text' },
+                    { key: 'category', label: 'Category', type: 'badge' },
+                    { key: 'branch', label: 'Branch', type: 'text' },
+                    { key: 'qtySold', label: 'Qty Sold', type: 'number' },
+                    { key: 'revenue', label: 'Revenue', type: 'currency' },
+                    { key: 'avgSellingPrice', label: 'Avg Price', type: 'currency' },
+                    { key: 'categoryType', label: 'Classification', type: 'badge' },
+                    { key: 'recommendation', label: 'Recommendation', type: 'text' }
+                ],
+                metrics: ['topItems', 'lowItems', 'deadItems', 'totalRevenue']
+            },
+            'cost-centre': {
+                title: 'Cost Centre Purchase Report',
+                endpoint: '/api/reports/cost-centre',
+                dateType: 'ad',
+                filters: ['from', 'to', 'costCentre', 'branch'],
+                columns: [
+                    { key: 'date', label: 'Date', type: 'date' },
+                    { key: 'invoiceNo', label: 'Invoice No', type: 'text' },
+                    { key: 'supplier', label: 'Supplier', type: 'text' },
+                    { key: 'description', label: 'Description', type: 'text' },
+                    { key: 'costCentre', label: 'Cost Centre', type: 'badge' },
+                    { key: 'branch', label: 'Branch', type: 'text' },
+                    { key: 'qty', label: 'Qty', type: 'number' },
+                    { key: 'unitRate', label: 'Unit Rate', type: 'currency' },
+                    { key: 'totalAmount', label: 'Total', type: 'currency' },
+                    { key: 'status', label: 'Status', type: 'badge' }
+                ],
+                metrics: ['totalPurchase', 'kitchenSpend', 'barSpend', 'orderCount']
+            }
+        };
+        
+        // Filter options
+        const filterOptions = {
+            branches: ['Thamel', 'Patan', 'Baneshwor', 'Lazimpat', 'Kathmandu'],
+            categories: ['Kitchen', 'Bar', 'Bakery', 'Housekeeping', 'Front Office'],
+            costCentres: ['Kitchen', 'Bar', 'Bakery', 'Housekeeping', 'Maintenance'],
+            paymentModes: ['Cash', 'Card', 'QR Pay', 'E-Sewa', 'FonePay'],
+            validOptions: [{value: '-1', label: 'All'}, {value: '0', label: 'Active'}, {value: '1', label: 'Archived'}]
+        };
+        
+        // ==================== INITIALIZATION ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            setupSidebar();
+            renderFilters();
+            loadReport();
+        });
+        
+        function setupSidebar() {
+            document.querySelectorAll('[data-report]').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const report = item.dataset.report;
+                    switchReport(report);
+                });
+            });
+            
+            document.getElementById('toggleSidebar').addEventListener('click', () => {
+                document.getElementById('sidebar').classList.toggle('-ml-64');
+            });
+        }
+        
+        function switchReport(reportId) {
+            currentReport = reportId;
+            const config = reportConfigs[reportId];
+            
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+            document.querySelector(`[data-report="${reportId}"]`).classList.add('active');
+            
+            document.getElementById('pageTitle').textContent = config.title;
+            
+            currentPage = 1;
+            tableData = [];
+            filteredData = [];
+            
+            renderFilters();
+            loadReport();
+        }
+        
+        // ==================== FILTERS ====================
+        function renderFilters() {
+            const config = reportConfigs[currentReport];
+            const container = document.getElementById('filterContainer');
+            const today = new Date().toISOString().split('T')[0];
+            
+            let html = '';
+            
+            if (config.filters.includes('from')) {
+                const defaultValue = config.dateType === 'bs' ? '2083.01.01' : today;
+                html += `
+                    <div>
+                        <label class="block text-xs font-medium text-muted mb-1">From ${config.dateType === 'bs' ? '(BS)' : '(AD)'}</label>
+                        <input type="${config.dateType === 'bs' ? 'text' : 'date'}" id="filterFrom" 
+                            value="${defaultValue}" 
+                            class="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                    </div>
+                `;
+            }
+            
+            if (config.filters.includes('to')) {
+                const defaultValue = config.dateType === 'bs' ? '2083.12.31' : today;
+                html += `
+                    <div>
+                        <label class="block text-xs font-medium text-muted mb-1">To ${config.dateType === 'bs' ? '(BS)' : '(AD)'}</label>
+                        <input type="${config.dateType === 'bs' ? 'text' : 'date'}" id="filterTo" 
+                            value="${defaultValue}"
+                            class="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                    </div>
+                `;
+            }
+            
+            if (config.filters.includes('branch')) {
+                html += `
+                    <div>
+                        <label class="block text-xs font-medium text-muted mb-1">Branch</label>
+                        <select id="filterBranch" class="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                            <option value="">All Branches</option>
+                            ${filterOptions.branches.map(b => `<option value="${b}">${b}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+            }
+            
+            if (config.filters.includes('category')) {
+                html += `
+                    <div>
+                        <label class="block text-xs font-medium text-muted mb-1">Category</label>
+                        <select id="filterCategory" class="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                            <option value="">All Categories</option>
+                            ${filterOptions.categories.map(c => `<option value="${c}">${c}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+            }
+            
+            if (config.filters.includes('costCentre')) {
+                html += `
+                    <div>
+                        <label class="block text-xs font-medium text-muted mb-1">Cost Centre</label>
+                        <select id="filterCostCentre" class="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                            <option value="">All Cost Centres</option>
+                            ${filterOptions.costCentres.map(c => `<option value="${c}">${c}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+            }
+            
+            if (config.filters.includes('paymentMode')) {
+                html += `
+                    <div>
+                        <label class="block text-xs font-medium text-muted mb-1">Payment Mode</label>
+                        <select id="filterPaymentMode" class="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                            <option value="">All Modes</option>
+                            ${filterOptions.paymentModes.map(p => `<option value="${p}">${p}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+            }
+            
+            if (config.filters.includes('valid')) {
+                html += `
+                    <div>
+                        <label class="block text-xs font-medium text-muted mb-1">Status</label>
+                        <select id="filterValid" class="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                            ${filterOptions.validOptions.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        function getFilterParams() {
+            const config = reportConfigs[currentReport];
+            const params = {};
+            
+            if (config.filters.includes('from')) {
+                params.from = document.getElementById('filterFrom').value;
+            }
+            
+            if (config.filters.includes('to')) {
+                params.to = document.getElementById('filterTo').value;
+            }
+            
+            if (config.filters.includes('branch')) {
+                params.branch = document.getElementById('filterBranch').value || null;
+            }
+            
+            if (config.filters.includes('category')) {
+                params.category = document.getElementById('filterCategory').value || null;
+            }
+            
+            if (config.filters.includes('costCentre')) {
+                params.costCentre = document.getElementById('filterCostCentre').value || null;
+            }
+            
+            if (config.filters.includes('paymentMode')) {
+                params.paymentMode = document.getElementById('filterPaymentMode').value || null;
+            }
+            
+            if (config.filters.includes('valid')) {
+                params.valid = parseInt(document.getElementById('filterValid').value);
+            }
+            
+            return params;
+        }
+        
+        function resetFilters() {
+            renderFilters();
+            loadReport();
+        }
+        
+        // ==================== DATA LOADING ====================
+        async function loadReport() {
+            showLoading(true);
+            
+            try {
+                const config = reportConfigs[currentReport];
+                const params = getFilterParams();
+                
+                const queryString = Object.entries(params)
+                    .filter(([_, v]) => v !== null && v !== undefined)
+                    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+                    .join('&');
+                
+                const response = await fetch(`${config.endpoint}?${queryString}`);
+                
+                if (!response.ok) throw new Error('Failed to load data');
+                
+                tableData = await response.json();
+                filteredData = [...tableData];
+                currentPage = 1;
+                
+                renderTable();
+                renderMetrics();
+                renderChart();
+                
+                showToast('Data loaded successfully', 'success');
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showToast('Using demo data - API not available', 'info');
+                tableData = generateMockData();
+                filteredData = [...tableData];
+                renderTable();
+                renderMetrics();
+                renderChart();
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function generateMockData() {
+            if (currentReport === 'item-sales') {
+                return [
+                    { itemName: 'Buff Momo', category: 'Kitchen', branch: 'Thamel', qtySold: 412, revenue: 1648000, avgSellingPrice: 4000, categoryType: 'Top', recommendation: 'Retain — flagship item' },
+                    { itemName: 'Chicken Chowmein', category: 'Kitchen', branch: 'Thamel', qtySold: 389, revenue: 1167000, avgSellingPrice: 3000, categoryType: 'Top', recommendation: 'Retain — high volume' },
+                    { itemName: 'Dal Bhat Thali', category: 'Kitchen', branch: 'Patan', qtySold: 358, revenue: 1790000, avgSellingPrice: 5000, categoryType: 'Top', recommendation: 'Retain — high margin' },
+                    { itemName: 'Veg Thukpa', category: 'Kitchen', branch: 'Baneshwor', qtySold: 274, revenue: 822000, avgSellingPrice: 3000, categoryType: 'Low', recommendation: 'Review pricing' },
+                    { itemName: 'Sekuwa Platter', category: 'Kitchen', branch: 'Lazimpat', qtySold: 201, revenue: 1407000, avgSellingPrice: 7000, categoryType: 'Low', recommendation: 'Premium positioning' },
+                    { itemName: 'Chicken Choila', category: 'Kitchen', branch: 'Thamel', qtySold: 118, revenue: 531000, avgSellingPrice: 4500, categoryType: 'Dead', recommendation: 'Reposition or remove' },
+                    { itemName: 'Paneer Tikka', category: 'Kitchen', branch: 'Patan', qtySold: 97, revenue: 533500, avgSellingPrice: 5500, categoryType: 'Dead', recommendation: 'Improve food cost' },
+                    { itemName: 'Fish Curry', category: 'Kitchen', branch: 'Baneshwor', qtySold: 84, revenue: 630000, avgSellingPrice: 7500, categoryType: 'Dead', recommendation: 'Review pricing' }
+                ];
+            }
+            
+            if (currentReport === 'cost-centre') {
+                return [
+                    { date: '2026-09-01', invoiceNo: 'PO-881', supplier: 'Annapurna Traders', description: 'Chicken (20kg)', costCentre: 'Kitchen', branch: 'Thamel', qty: 20, unitRate: 450, totalAmount: 9000, status: 'Approved' },
+                    { date: '2026-09-01', invoiceNo: 'PO-882', supplier: 'Nepal Beverages', description: 'Beer Everest (Case)', costCentre: 'Bar', branch: 'Thamel', qty: 5, unitRate: 2400, totalAmount: 12000, status: 'Approved' },
+                    { date: '2026-09-02', invoiceNo: 'PO-883', supplier: 'Himalayan Dairy', description: 'Paneer (10kg)', costCentre: 'Kitchen', branch: 'Patan', qty: 10, unitRate: 380, totalAmount: 3800, status: 'Approved' },
+                    { date: '2026-09-03', invoiceNo: 'PO-884', supplier: 'Sunrise Cleaning', description: 'Floor Cleaner (5L x6)', costCentre: 'Housekeeping', branch: 'Baneshwor', qty: 6, unitRate: 750, totalAmount: 4500, status: 'Approved' },
+                    { date: '2026-09-04', invoiceNo: 'PO-885', supplier: 'Annapurna Traders', description: 'Mutton (15kg)', costCentre: 'Kitchen', branch: 'Thamel', qty: 15, unitRate: 920, totalAmount: 13800, status: 'Approved' },
+                    { date: '2026-09-05', invoiceNo: 'PO-886', supplier: 'Kathmandu Spirits', description: 'Old Durbar Whisky', costCentre: 'Bar', branch: 'Lazimpat', qty: 4, unitRate: 7200, totalAmount: 28800, status: 'Under Review' }
+                ];
+            }
+            
+            // Default mock for other reports
+            const mockData = [];
+            for (let i = 1; i <= 20; i++) {
+                mockData.push({
+                    billNo: `BL-2026-${3400 + i}`,
+                    invoiceDate: `2026-09-${(i % 30) + 1}`,
+                    buyerName: `Customer ${i}`,
+                    buyerPAN: `12345678${i}`,
+                    totalSaleValue: Math.floor(Math.random() * 50000) + 5000,
+                    discountAmount: Math.floor(Math.random() * 5000),
+                    taxableAmount: Math.floor(Math.random() * 45000) + 4000,
+                    vataMount: Math.floor(Math.random() * 6000),
+                    totalWithVAT: Math.floor(Math.random() * 50000) + 10000,
+                    paymentMode: ['Cash', 'Card', 'QR Pay'][Math.floor(Math.random() * 3)]
+                });
+            }
+            return mockData;
+        }
+        
+        function refreshData() {
+            loadReport();
+        }
+        
+        // ==================== TABLE RENDERING ====================
+        function renderTable() {
+            const config = reportConfigs[currentReport];
+            const headerRow = document.getElementById('tableHeader');
+            const body = document.getElementById('tableBody');
+            const footer = document.getElementById('tableFooter');
+            
+            headerRow.innerHTML = `<th class="w-12 px-4 py-3 text-left text-xs font-semibold text-muted">#</th>` +
+                config.columns.map(col => 
+                    `<th class="px-4 py-3 text-left text-xs font-semibold text-muted">${col.label}</th>`
+                ).join('');
+            
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const pageData = filteredData.slice(start, end);
+            
+            if (pageData.length === 0) {
+                body.innerHTML = '<tr><td colspan="' + (config.columns.length + 1) + '" class="px-4 py-8 text-center text-muted">No data available</td></tr>';
+            } else {
+                body.innerHTML = pageData.map((row, idx) => 
+                    '<tr class="hover:bg-background/50">' +
+                    `<td class="px-4 py-3 text-sm text-muted">${start + idx + 1}</td>` +
+                    config.columns.map(col => {
+                        const val = row[col.key];
+                        let display = val ?? '—';
+                        
+                        if (col.type === 'currency') {
+                            display = typeof val === 'number' ? `Rs. ${val.toLocaleString('en-IN')}` : '—';
+                        } else if (col.type === 'badge') {
+                            const badgeClass = getBadgeClass(val, col.key);
+                            display = `<span class="px-2 py-1 text-xs rounded-full ${badgeClass}">${val ?? '—'}</span>`;
+                        } else if (col.type === 'number') {
+                            display = typeof val === 'number' ? val.toLocaleString('en-IN') : val;
+                        }
+                        
+                        return `<td class="px-4 py-3 text-sm">${display}</td>`;
+                    }).join('') +
+                    '</tr>'
+                ).join('');
+            }
+            
+            if (filteredData.length > 0) {
+                footer.innerHTML = '<tr class="font-semibold">' +
+                    `<td class="px-4 py-3 text-sm">TOTAL</td>` +
+                    config.columns.map(col => {
+                        if (col.type === 'currency' || col.type === 'number') {
+                            const sum = filteredData.reduce((acc, row) => acc + ((row[col.key] ?? 0)), 0);
+                            const display = col.type === 'currency' ? `Rs. ${sum.toLocaleString('en-IN')}` : sum.toLocaleString('en-IN');
+                            return `<td class="px-4 py-3 text-sm">${display}</td>`;
+                        }
+                        return '<td class="px-4 py-3 text-sm">—</td>';
+                    }).join('') +
+                    '</tr>';
+            } else {
+                footer.innerHTML = '';
+            }
+            
+            const total = filteredData.length;
+            const totalPages = Math.ceil(total / rowsPerPage);
+            document.getElementById('pageInfo').textContent = 
+                total === 0 ? 'No records' : `Showing ${start + 1}-${Math.min(end, total)} of ${total}`;
+        }
+        
+        function getBadgeClass(value, key) {
+            if (!value) return 'bg-gray-100 text-gray-700';
+            
+            const val = String(value).toLowerCase();
+            
+            if (key === 'categoryType' || key === 'category') {
+                if (val === 'top') return 'bg-green-100 text-green-700';
+                if (val === 'low') return 'bg-yellow-100 text-yellow-700';
+                if (val === 'dead') return 'bg-red-100 text-red-700';
+            }
+            
+            if (key === 'status') {
+                if (val === 'approved' || val === 'reconciled') return 'bg-green-100 text-green-700';
+                if (val === 'pending' || val === 'under review') return 'bg-yellow-100 text-yellow-700';
+                if (val === 'voided' || val === 'rejected') return 'bg-red-100 text-red-700';
+            }
+            
+            if (key === 'paymentMode') {
+                if (val === 'cash') return 'bg-blue-100 text-blue-700';
+                if (val === 'card') return 'bg-purple-100 text-purple-700';
+                if (val === 'qr pay' || val === 'e-sewa') return 'bg-green-100 text-green-700';
+            }
+            
+            return 'bg-gray-100 text-gray-700';
+        }
+        
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderTable();
+            }
+        }
+        
+        function nextPage() {
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderTable();
+            }
+        }
+        
+        // ==================== METRICS ====================
+        function renderMetrics() {
+            const config = reportConfigs[currentReport];
+            const container = document.getElementById('metricsContainer');
+            
+            let metrics = [];
+            
+            if (currentReport === 'item-sales') {
+                const top = filteredData.filter(r => r.categoryType === 'Top').length;
+                const low = filteredData.filter(r => r.categoryType === 'Low').length;
+                const dead = filteredData.filter(r => r.categoryType === 'Dead').length;
+                const revenue = filteredData.reduce((acc, r) => acc + (r.revenue || 0), 0);
+                
+                metrics = [
+                    { label: 'Top Items', value: top, icon: 'trending-up', color: 'text-green-600', bg: 'bg-green-50' },
+                    { label: 'Low Sellers', value: low, icon: 'minus', color: 'text-yellow-600', bg: 'bg-yellow-50' },
+                    { label: 'Dead Items', value: dead, icon: 'trending-down', color: 'text-red-600', bg: 'bg-red-50' },
+                    { label: 'Total Revenue', value: `Rs. ${(revenue/100000).toFixed(1)}L`, icon: 'dollar-sign', color: 'text-blue-600', bg: 'bg-blue-50' }
+                ];
+            } else if (currentReport === 'cost-centre') {
+                const kitchen = filteredData.filter(r => r.costCentre === 'Kitchen').reduce((acc, r) => acc + (r.totalAmount || 0), 0);
+                const bar = filteredData.filter(r => r.costCentre === 'Bar').reduce((acc, r) => acc + (r.totalAmount || 0), 0);
+                const total = filteredData.reduce((acc, r) => acc + (r.totalAmount || 0), 0);
+                
+                metrics = [
+                    { label: 'Total Purchase', value: `Rs. ${(total/1000).toFixed(0)}K`, icon: 'shopping-cart', color: 'text-blue-600', bg: 'bg-blue-50' },
+                    { label: 'Kitchen Spend', value: `Rs. ${(kitchen/1000).toFixed(0)}K`, icon: 'utensils', color: 'text-green-600', bg: 'bg-green-50' },
+                    { label: 'Bar Spend', value: `Rs. ${(bar/1000).toFixed(0)}K`, icon: 'wine', color: 'text-purple-600', bg: 'bg-purple-50' },
+                    { label: 'Orders', value: filteredData.length, icon: 'file-text', color: 'text-gray-600', bg: 'bg-gray-50' }
+                ];
+            } else {
+                const total = filteredData.reduce((acc, r) => acc + ((r.totalWithVAT || r.netAmount || r.totalAmount || 0)), 0);
+                const vat = filteredData.reduce((acc, r) => acc + ((r.vataMount || r.returnVATAmount || 0)), 0);
+                
+                metrics = [
+                    { label: 'Total Revenue', value: `Rs. ${(total/1000).toFixed(0)}K`, icon: 'dollar-sign', color: 'text-green-600', bg: 'bg-green-50' },
+                    { label: 'Total VAT', value: `Rs. ${(vat/1000).toFixed(0)}K`, icon: 'percent', color: 'text-blue-600', bg: 'bg-blue-50' },
+                    { label: 'Transactions', value: filteredData.length, icon: 'receipt', color: 'text-purple-600', bg: 'bg-purple-50' },
+                    { label: 'Avg Bill', value: `Rs. ${(total/(filteredData.length||1)).toFixed(0)}`, icon: 'calculator', color: 'text-orange-600', bg: 'bg-orange-50' }
+                ];
+            }
+            
+            container.innerHTML = metrics.map(m => `
+                <div class="bg-card border border-border rounded-xl p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="w-10 h-10 rounded-lg ${m.bg} flex items-center justify-center">
+                            <i data-lucide="${m.icon}" class="w-5 h-5 ${m.color}"></i>
+                        </div>
+                    </div>
+                    <p class="text-sm text-muted">${m.label}</p>
+                    <p class="text-2xl font-bold mt-1">${m.value}</p>
+                </div>
+            `).join('');
+            
+            lucide.createIcons();
+        }
+        
+        // ==================== CHART ====================
+        function renderChart() {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            if (trendChartInstance) {
+                trendChartInstance.destroy();
+            }
+            
+            const dateGroups = {};
+            filteredData.forEach(row => {
+                const date = row.billDate || row.invoiceDate || row.date || 'Unknown';
+                const amount = row.totalWithVAT || row.netAmount || row.totalAmount || row.revenue || 0;
+                dateGroups[date] = (dateGroups[date] || 0) + amount;
+            });
+            
+            const labels = Object.keys(dateGroups).slice(0, 10);
+            const values = Object.values(dateGroups).slice(0, 10);
+            
+            trendChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Revenue',
+                        data: values,
+                        backgroundColor: 'rgba(251, 191, 36, 0.7)',
+                        borderColor: 'rgba(251, 191, 36, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+        
+        // ==================== EXPORT FUNCTIONS ====================
+        function exportExcel() {
+            const config = reportConfigs[currentReport];
+            
+            const headers = ['#', ...config.columns.map(c => c.label)];
+            const rows = filteredData.map((row, idx) => {
+                return [idx + 1, ...config.columns.map(col => row[col.key] ?? '')];
+            });
+            
+            const totals = ['TOTAL'];
+            config.columns.forEach(col => {
+                if (col.type === 'currency' || col.type === 'number') {
+                    const sum = filteredData.reduce((acc, r) => acc + ((r[col.key] ?? 0)), 0);
+                    totals.push(sum);
+                } else {
+                    totals.push('');
+                }
+            });
+            
+            const wsData = [headers, ...rows, totals];
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, config.title.slice(0, 31));
+            
+            const fileName = `${config.title.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            
+            showToast('Excel exported successfully', 'success');
+        }
+        
+        function exportPDF() {
+            const { jsPDF } = window.jspdf;
+            const config = reportConfigs[currentReport];
+            
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const pageWidth = doc.internal.pageSize.getWidth();
+            
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text(config.title, 14, 16);
+            
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth - 14, 16, { align: 'right' });
+            
+            const head = [['#', ...config.columns.map(c => c.label)]];
+            const body = filteredData.map((row, idx) => {
+                return [idx + 1, ...config.columns.map(col => {
+                    const val = row[col.key];
+                    if (col.type === 'currency') {
+                        return typeof val === 'number' ? `Rs. ${val.toLocaleString('en-IN')}` : '—';
+                    }
+                    return val ?? '—';
+                })];
+            });
+            
+            const totals = [''];
+            config.columns.forEach(col => {
+                if (col.key.includes('Name') || col.key === 'date' || col.key === 'description') {
+                    totals.push('TOTAL');
+                } else if (col.type === 'currency' || col.type === 'number') {
+                    const sum = filteredData.reduce((acc, r) => acc + ((r[col.key] ?? 0)), 0);
+                    totals.push(col.type === 'currency' ? `Rs. ${sum.toLocaleString('en-IN')}` : sum);
+                } else {
+                    totals.push('');
+                }
+            });
+            
+            doc.autoTable({
+                startY: 22,
+                head,
+                body,
+                foot: [totals],
+                showFoot: 'lastPage',
+                theme: 'grid',
+                styles: { fontSize: 7, cellPadding: 2 },
+                headStyles: { fillColor: [232, 237, 243], textColor: [30, 41, 59], fontStyle: 'bold' },
+                footStyles: { fillColor: [238, 242, 255], textColor: [30, 41, 59], fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [248, 250, 252] },
+                margin: { top: 22, left: 14, right: 14, bottom: 14 }
+            });
+            
+            const fileName = `${config.title.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(fileName);
+            
+            showToast('PDF exported successfully', 'success');
+        }
+        
+        // ==================== UTILITIES ====================
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+        }
+        
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const colors = {
+                success: 'bg-green-600',
+                error: 'bg-red-600',
+                info: 'bg-secondary'
+            };
+            
+            const icons = {
+                success: 'check-circle',
+                error: 'alert-circle',
+                info: 'info'
+            };
+            
+            toast.className = `toast ${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3`;
+            toast.innerHTML = `
+                <i data-lucide="${icons[type]}" class="w-5 h-5"></i>
+                <span class="text-sm font-medium">${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            lucide.createIcons();
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
 </body>
 </html>
