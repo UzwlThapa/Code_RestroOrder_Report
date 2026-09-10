@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --primary: #1d4ed8;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #334155;
+  --accent: #2563eb;
+  --accent-foreground: #ffffff;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #2563eb;
+  --radius: 6px;
+  --font-sans: 'DM Sans', sans-serif;
+
+  --badge-top-bg: #dcfce7;
+  --badge-top-text: #166534;
+  --badge-low-bg: #fef9c3;
+  --badge-low-text: #854d0e;
+  --badge-dead-bg: #fee2e2;
+  --badge-dead-text: #991b1b;
+
+  --table-header-bg: #f8fafc;
+  --table-stripe: #f8fafc;
+  --table-totals-bg: #eff6ff;
+  --table-totals-border: #bfdbfe;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    font-size: 14px;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    height: 100%;
+  }
+
+  h1, h2, h3, h4, h5, h6, p {
+    margin: 0;
+  }
+}
+
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  .sort-asc::after {
+    content: ' ↑';
+    font-size: 11px;
+    color: var(--primary);
+  }
+
+  .sort-desc::after {
+    content: ' ↓';
+    font-size: 11px;
+    color: var(--primary);
+  }
+
+  .print-hidden {
+    /* hidden in print */
+  }
+}
+
+/* ─── Print Styles ─────────────────────────────────────────── */
+@media print {
+  .print-hidden {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    font-size: 11px;
+    color: #000000;
+  }
+
+  .print-full {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    page-break-inside: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  th, td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 4px 8px !important;
+    font-size: 10px !important;
+  }
+
+  .no-print-border {
+    border: none !important;
+  }
+
+  @page {
+    size: A4 landscape;
+    margin: 1.5cm;
+  }
+}

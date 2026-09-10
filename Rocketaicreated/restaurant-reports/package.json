@@ -1,0 +1,30 @@
+{
+  "name": "restaurant-reports",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "15.0.3",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "lucide-react": "0.446.0",
+    "@heroicons/react": "2.1.5",
+    "xlsx": "0.18.5",
+    "jspdf": "2.5.2",
+    "jspdf-autotable": "3.8.4"
+  },
+  "devDependencies": {
+    "typescript": "5.6.3",
+    "@types/node": "20.16.11",
+    "@types/react": "18.3.11",
+    "@types/react-dom": "18.3.1",
+    "tailwindcss": "3.4.13",
+    "postcss": "8.4.47",
+    "autoprefixer": "10.4.20"
+  }
+}
