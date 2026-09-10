@@ -5,11 +5,13 @@ using Microsoft.Data.SqlClient;
 namespace ReportingApi.Services;
 
 /// <summary>
-/// Every method here EXECs an existing, already-correct RestroOrder stored
-/// procedure — usp_ro_GetSalesBook, usp_ro_GetReturnedSalesBook, and
-/// usp_MaterializedReportView were already built (by the IRD-Sync/CBMS
-/// pipeline) and are not reimplemented. Only
-/// usp_RO_Reports_FilterableSalesReport is new (see sql/02_reporting_objects.sql).
+/// Report queries for RestroOrder Reports - Nepal IRD 2026 Standard
+/// Supports 5 core reports:
+/// 1. IRD Sales Book (Tax Compliance)
+/// 2. IRD Sales Return Book (Tax Compliance)
+/// 3. Materialized View Report (Filtered Sales)
+/// 4. Item Sales Report (Menu Engineering - Top/Least/Non-Selling)
+/// 5. Cost Centre Purchase Report (Kitchen/Bar/Bakery etc.)
 /// </summary>
 public class ReportQueries
 {
@@ -26,9 +28,7 @@ public class ReportQueries
     /// <summary>
     /// IRD Nepal Sales Book. NOTE: FromDate/ToDate are BS (Bikram Sambat)
     /// calendar date strings, dot-separated, e.g. "2082.04.01" — matching
-    /// exactly what usp_ro_GetSalesBook expects (it does a string BETWEEN
-    /// on invoice_date, not a real DATETIME comparison). Pass through
-    /// whatever format the existing app already uses for this proc.
+    /// exactly what usp_ro_GetSalesBook expects.
     /// </summary>
     public async Task<IEnumerable<dynamic>> GetIrdSalesBookAsync(string fromDateBS, string toDateBS)
     {
@@ -64,25 +64,44 @@ public class ReportQueries
             commandType: CommandType.StoredProcedure, commandTimeout: 60);
     }
 
-    /// <summary>General filterable sales report — item/unit/rate/cost-center/table/payment-mode wise.</summary>
-    public async Task<IEnumerable<dynamic>> GetFilterableSalesReportAsync(
-        DateTime from, DateTime to, string? item, string? costCenter, string? unit,
-        decimal? rateMin, decimal? rateMax, string? table, string? paymentMode)
+    /// <summary>
+    /// Item Sales Report - Menu Engineering Analysis
+    /// Returns item-wise sales with category classification (Top/Least/Dead selling)
+    /// Supports filtering by cost center (category) and branch
+    /// </summary>
+    public async Task<IEnumerable<dynamic>> GetItemSalesReportAsync(
+        DateTime from, DateTime to, string? category, string? branch)
     {
         using var conn = Open();
         return await conn.QueryAsync(
-            "usp_RO_Reports_FilterableSalesReport",
+            "usp_RO_ItemSalesReport",
             new
             {
-                From = from.Date,
-                To = to.Date,
-                Item = item,
-                CostCenter = costCenter,
-                Unit = unit,
-                RateMin = rateMin,
-                RateMax = rateMax,
-                Table = table,
-                PaymentMode = paymentMode
+                FromDate = from.Date,
+                ToDate = to.Date,
+                Category = category,
+                Branch = branch
+            },
+            commandType: CommandType.StoredProcedure, commandTimeout: 60);
+    }
+
+    /// <summary>
+    /// Cost Centre Purchase Report
+    /// Returns purchase orders grouped by cost centre (Kitchen, Bar, Bakery, Housekeeping etc.)
+    /// Supports filtering by specific cost centre and branch
+    /// </summary>
+    public async Task<IEnumerable<dynamic>> GetCostCentrePurchaseReportAsync(
+        DateTime from, DateTime to, string? costCentre, string? branch)
+    {
+        using var conn = Open();
+        return await conn.QueryAsync(
+            "usp_RO_CostCentrePurchaseReport",
+            new
+            {
+                FromDate = from.Date,
+                ToDate = to.Date,
+                CostCentre = costCentre,
+                Branch = branch
             },
             commandType: CommandType.StoredProcedure, commandTimeout: 60);
     }

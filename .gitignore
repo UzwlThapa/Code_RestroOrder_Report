@@ -2,35 +2,48 @@
 # Build artifacts
 bin/
 obj/
-*.exe
 *.dll
+*.exe
 *.pdb
-*.nupkg
-*.snupkg
+*.so
+*.dylib
+*.jar
+*.war
+*.class
 
 # Dependencies
 packages/
 node_modules/
-
-# Logs
-*.log
-
-# Environment
+venv/
+.venv/
 .env
 .env.local
 *.env.*
 
-# Editors
-.vscode/
-.idea/
-*.swp
-*.swo
+# Logs
+*.log
+logs/
 
 # OS generated files
 .DS_Store
 Thumbs.db
 
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
 # Testing
-TestResults/
 coverage/
+htmlcov/
+.coverage
+
+# Distribution / packaging
+dist/
+build/
+*.tar.gz
+*.whl
+*.egg-info/
 ```
